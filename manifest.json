@@ -1,0 +1,35 @@
+﻿{
+  "name": "Mars helper",
+  "version": "1.6",
+  "manifest_version": 2,
+  "description": "Helper for the game mars2025. Shows important information for evaluating the country's.
+  Reports of an attack on your country when the icon in the top right of the toolbar shows you in the game.",
+  "icons": {"128":"logo.png"},
+  "update_url": "http://dl.dropbox.com/u/66092653/mars/updates.xml",
+  "permissions": ["webRequest","notifications",
+				  "http://mars2025.net/*",
+				  "http://www.mars2025.net/*",
+                  "http://mars2025.ru/*",
+				  "http://www.mars2025.ru/*"],
+  "content_scripts": [
+    {
+      "matches" : [
+        "http://mars2025.net/*",
+		"http://www.mars2025.net/*",
+        "http://mars2025.ru/*",
+		"http://www.mars2025.ru/*"
+      ],
+      "js": ["jcontent.js"],
+	  "run_at" : "document_idle",
+      "all_frames" : false
+    }
+  ],
+    "options_page": "options.html",
+    "background": {
+    "scripts": ["bg.js"]
+  },
+    "browser_action": {
+      "default_title": "You are not logged in mars",
+      "default_icon": "off.png"
+  }
+}
