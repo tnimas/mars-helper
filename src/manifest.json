@@ -1,11 +1,9 @@
 ﻿{
   "name": "Mars helper",
-  "version": "1.0.6.1",
+  "version": "1.0.6.2",
   "manifest_version": 2,
-  "description": "Helper for the game mars2025. Shows important information for evaluating the country's.
-  Reports of an attack on your country when the icon in the top right of the toolbar shows you in the game.",
+  "description": "Helper for the game mars2025. Warns of attacks when you are in the game. Displays detailed information on the page of spy.",
   "icons": {"128":"logo.png"},
-  "update_url": "https://raw.github.com/tnimas/mars-helper/master/updates.xml",
   "permissions": ["webRequest","notifications",
 				  "http://mars2025.net/*",
 				  "http://www.mars2025.net/*",
