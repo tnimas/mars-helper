@@ -4,7 +4,7 @@
   "manifest_version": 2,
   "description": "Helper for the game mars2025. Warns of attacks when you are in the game. Displays detailed information on the page of spy.",
   "icons": {"128":"logo.png"},
-  "permissions": ["webRequest","notifications", "contextMenus", "tabs",
+  "permissions": ["webRequest","notifications", "contextMenus",
 				  "http://mars2025.net/*",
 				  "http://www.mars2025.net/*",
                   "http://mars2025.ru/*",
