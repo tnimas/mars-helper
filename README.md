@@ -2,7 +2,7 @@
 
 This is a chrome extension for a browser strategy [mars2025.net](http://mars2025.net "browser game mars2025"). 
 
-You can [install](https://chrome.google.com/webstore/detail/npfcldnmldgoemkcafnbcfmpjdgbecdi) it in Chrome Web Store.
+You can [install](https://chrome.google.com/webstore/detail/npfcldnmldgoemkcafnbcfmpjdgbecdi) it from Chrome Web Store.
 
 For now it is doing 3 things:
 - Notify about attacks on your virtual country.
