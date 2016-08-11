@@ -25,6 +25,8 @@ window.addEventListener('load', function() {
   options.isActivated.onchange = function() {
     localStorage.isActivated = options.isActivated.checked;
     ghost(!options.isActivated.checked);
+	chrome.runtime.sendMessage({activatedStateChanged: true}, function(response) {
+	});
   };
 
   options.frequency.onchange = function() {

@@ -1,22 +1,68 @@
 ﻿// Copyright (c) 2012 The tnimas. All rights reserved.
 
+
 var oldData = { pop:0, land:0, turns:0};
 var destroyLandData = new Date(0);
+
+var attackTimerId = 0;
+var gameLoggedTimerId = 0;
+
+function getNotificationId() {
+  var id = Math.floor(Math.random() * 9007199254740992) + 1;
+  return id.toString();
+}
+
+var pauseOptions = {
+	"title": "Pause the country monitoring", 
+	"contexts":["browser_action"],
+	"onclick": function(){
+		changeIsActivatedState(false);
+		tryConnectIfActivated();
+	}
+}
+var resumeOptions = {
+	"title": "Start the country monitoring", 
+	"contexts":["browser_action"],
+	"onclick": function(){
+		changeIsActivatedState(true);
+		tryConnectIfActivated();
+	}
+}
+var contextMenuId = chrome.contextMenus.create(JSON.parse(localStorage.isActivated) ? pauseOptions : resumeOptions);
+
+function changeIsActivatedState(state){
+	localStorage.isActivated = state;
+	delete(pauseOptions.generatedId);
+	delete(resumeOptions.generatedId);
+	chrome.contextMenus.update(contextMenuId, state ? pauseOptions : resumeOptions);
+}
+
+
 
 var Connect = {
 _connect: false,
 _connectedPage : "",
+_lastTimeConnected: new Date(0),
+getLastTimeConnected : function(){
+	return this._lastTimeConnected;
+},
 setConnect : function(isConnect,url){
 	this._connect = isConnect;
 	
 	if (isConnect){
 		var path = "on.png";
 		var logged = "You are logged in mars";
-		this._connectedPage = url;
+		this._lastTimeConnected = new Date();
+		this.setHostname(url);
 	} else {
-		var path = "off.png";
-		var logged = "You are not logged in mars";
 		this._connectedPage = "";
+		if (JSON.parse(localStorage.isActivated)) {
+			var path = "off.png";
+			var logged = "You are not logged in mars";
+		} else {
+			var path = "xz.png";
+			var logged = "Mars 2025 helper";
+		}
 	}
 	
 	chrome.browserAction.setIcon({path:path});
@@ -25,49 +71,80 @@ setConnect : function(isConnect,url){
 isConnect: function(){
 	return this._connect;
 	},
-getUrlPage: function(){
+setHostname: function(url){
+	var parser = document.createElement('a');
+	parser.href = url;
+	this._connectedPage = parser.origin;
+	},
+getHostname: function(){
 	return this._connectedPage;
-	}	
+	}
 };
 
-chrome.browserAction.onClicked.addListener(
-	function() {
-	var redirectPage = Connect.isConnect() ? Connect.getUrlPage() : "http://mars2025.net"; 
-		chrome.tabs.create( { url: redirectPage } );
-	}
-);
-
-
-var attackTimerId = 0;
-var gameLoggedTimerId = 0;
-// Conditionally initialize the options.
-if (!localStorage.isInitialized) {
-  localStorage.isActivated = true;   // The display activation.
-  localStorage.frequency = 12;        // The display frequency, in seconds.
-  localStorage.isInitialized = true; // The option initialization.
+function redirectToGamePage() {
+var redirectPage = Connect.isConnect() ? Connect.getHostname() + "/TheGame.aspx" : "http://mars2025.net"; 
+	chrome.tabs.create( { url: redirectPage, active: true }, function(wnd) {
+		chrome.windows.getCurrent(function(w){
+		chrome.windows.update(w.id, {focused:true});
+});
+	});
 }
 
-//4 host, 1 or 0 is avialable. if 1 then gamer in game.
+chrome.browserAction.onClicked.addListener(redirectToGamePage);
+chrome.notifications.onClicked.addListener(redirectToGamePage);
+
+// listen changes from options
+chrome.runtime.onMessage.addListener(
+  function(request, sender, sendResponse) {
+    if (request.activatedStateChanged) {
+	  changeIsActivatedState(JSON.parse(localStorage.isActivated));
+      tryConnectIfActivated();
+	}
+  });
+
+
+
+if (!JSON.parse(localStorage.isInitialized)) {
+  // isActivated means that the game status monitoring is turned on.
+  changeIsActivatedState(true);
+  // frequency - interval between status monitoring.
+  localStorage.frequency = 12;
+  localStorage.isInitialized = true; 
+} else{
+  if (!JSON.parse(localStorage.isActivated)){
+    Connect.setConnect(false);
+  }
+}
+
+//4 hosts; 1 or 0 is avialable. if 1 then the gamer is in the game.
 function tryConnect() {
 	if (Connect.isConnect()) return;
-	getPage("http://mars2025.net/TheGame.aspx",urlCorrect);
-	getPage("http://www.mars2025.net/TheGame.aspx",urlCorrect);
-	getPage("http://www.mars2025.ru/TheGame.aspx",urlCorrect);
-	getPage("http://mars2025.ru/TheGame.aspx",urlCorrect);
+	getPage("http://mars2025.net/Advisor.aspx",onStartMonitoringForCorrectUrl);
+	getPage("http://www.mars2025.net/Advisor.aspx",onStartMonitoringForCorrectUrl);
+	getPage("http://www.mars2025.ru/Advisor.aspx",onStartMonitoringForCorrectUrl);
+	getPage("http://mars2025.ru/Advisor.aspx",onStartMonitoringForCorrectUrl);
 }
-
-if (JSON.parse(localStorage.isActivated)){
-	//every 60 second check on gamer login in game
-	tryConnect();
-	setInterval(tryConnect,60000);
+function tryConnectIfActivated(delay){
+	if (JSON.parse(localStorage.isActivated)){
+		// every 60 second check if the gamer is logged in
+		clearTimeout(gameLoggedTimerId);
+		gameLoggedTimerId = setTimeout(tryConnect, delay);
+	} else {
+		Connect.setConnect(false);
+	}
 }
+setInterval(function(){
+	tryConnectIfActivated();
+},60000);
 
-function urlCorrect(response,url) {
+tryConnectIfActivated();
+
+function onStartMonitoringForCorrectUrl(response,url) {
 if (response.indexOf("Error.aspx") == -1) {
 	//if page != Error.aspx -> gamer in game
 	clearInterval(attackTimerId);
 	attackTimerId = setInterval(function(){ 
-			getPage(url,onReq);
+			getPage(url,onProcessMonitoringRequest);
 		},
 		localStorage.frequency*1000
 	);
@@ -92,14 +169,14 @@ function getPage(url,func){
 }
 
 //processing page response. Get population and land and check with later result
-function onReq(pageText){
+function onProcessMonitoringRequest(pageText){
     if (pageText.indexOf("Error.aspx") != -1){
 		clearInterval(attackTimerId);
 		Connect.setConnect(false);
 		return;
 	}
 
-	var data = getData(pageText);
+	var data = parseStatisticPage(pageText);
 	if (data.pop == -1 || data.land == -1) 
 		return;
 	var attackedByPop = (oldData.pop > data.pop) && (oldData.turns <= data.turns);
@@ -119,24 +196,23 @@ function onReq(pageText){
 
 //if all is bad then send notification and sound.
 function bob(isPop){
-if (window.webkitNotifications) {
  var body = (isPop) ? 'The population has decreased!' : 'The land has decreased!' ;
-  var notification = window.webkitNotifications.createNotification(
-    'notif.png',                      // The image.
-    'Your country is attacked!', // The title.
-     body      // The body.
-  );
-  notification.show();
+  chrome.notifications.create(null, {
+    title: 'Mars 2025: Your country is attacked!',
+    iconUrl: 'notif.png',
+    type: 'basic',
+    message: body
+  }, function() {});
+  
   audio = new Audio('beep.mp3');
   audio.play();
 }
-}
 
-//get object data
-function getData(pageText){
+//get meaningful data from statistic page
+function parseStatisticPage(pageText){
 
-var pop = gval("ctl00_ContentPlaceHolder1_lblPopulation",pageText);
-var land = gval("ctl00_ContentPlaceHolder1_lblLand",pageText);
+var pop = gval("ctl00_ContentPlaceHolder1_CAdvisor1_lblPopulation",pageText);
+var land = gval("ctl00_ContentPlaceHolder1_CAdvisor1_lblLand",pageText);
 var turns = gval("ctl00_lblTurns",pageText);
 if (!pop || !land || !turns) {
 	pop = -1;
@@ -147,25 +223,31 @@ return { pop:pop,land:land,turns:turns};
 }
 
 //parse pageText for get content of html tag with id = id.
-function gval(id,pageText){
-
-var startText = pageText.slice(pageText.indexOf(id));
-startText = startText.slice(startText.indexOf(">")+1,startText.indexOf("<"));
-return startText.replace(/[^0-9]/g, '');
+function gval(id, pageText){
+	var startText = pageText.slice(pageText.indexOf(id));
+	startText = startText.slice(startText.indexOf(">")+1,startText.indexOf("<"));
+	return startText.replace(/[^0-9]/g, '');
 }
 
 chrome.webRequest.onBeforeRequest.addListener(
   function(info) {
+	if (info.url.indexOf("Logout.aspx") != -1){
+		Connect.setConnect(false);
+	}
+	if (info.url.indexOf("Error.aspx") != -1 && Connect.getLastTimeConnected() < new Date(new Date().getTime() - 10000)){
+		Connect.setConnect(false);
+	}
+
     if (info.url.indexOf("Destroy.aspx") != -1){
 		destroyLandData = new Date();
 	}
+ 
 	var indexEnter = info.url.indexOf("Enter");
 	var indexEndEnter = info.url.indexOf(".aspx");
 	var x = indexEnter+"Enter".length+1;
 	if (indexEnter != -1 && indexEndEnter != -1 && (indexEnter+"Enter".length+1) == indexEndEnter){
 		oldData = { pop:0, land:0, turns:0};
-		clearTimeout(gameLoggedTimerId);
-		gameLoggedTimerId = setTimeout(tryConnect,2000);
+		tryConnectIfActivated(2000);
 	}
   },
   // filters

@@ -1,14 +1,17 @@
 ﻿{
   "name": "Mars helper",
-  "version": "1.0.6.2",
+  "version": "1.1.0.0",
   "manifest_version": 2,
   "description": "Helper for the game mars2025. Warns of attacks when you are in the game. Displays detailed information on the page of spy.",
   "icons": {"128":"logo.png"},
-  "permissions": ["webRequest","notifications",
+  "permissions": ["webRequest","notifications", "contextMenus", "tabs",
 				  "http://mars2025.net/*",
 				  "http://www.mars2025.net/*",
                   "http://mars2025.ru/*",
 				  "http://www.mars2025.ru/*"],
+  "web_accessible_resources": [
+    "notif.png"
+  ],
   "content_scripts": [
     {
       "matches" : [
@@ -27,7 +30,7 @@
     "scripts": ["bg.js"]
   },
     "browser_action": {
-      "default_title": "You are not logged in mars",
-      "default_icon": "off.png"
+      "default_title": "Mars 2025 helper",
+      "default_icon": "xz.png"
   }
 }

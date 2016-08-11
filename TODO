@@ -1,3 +1,0 @@
--count the number of notifications during the attack and did not add more if there are more 4.
--remove notices that are long on the screen while the user is active.
--checking internet connection state, update icon to "off" and output notice if client offline.
